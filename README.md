@@ -89,7 +89,7 @@ These settings are essential for enabling Google OAuth2 authentication in your a
 1. Clone the repository:
 
 
-git clone https://github.com/yaroslaavl/Rental-of-Pets-Szczecin.git
+git clone https://github.com/yaroslaavl/Animal-Shelter.git
 
 ### Running Spring Boot Admin Server
   ```
