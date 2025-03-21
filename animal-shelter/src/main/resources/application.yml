@@ -1,0 +1,79 @@
+server:
+  port: 8080
+
+spring:
+  flyway:
+    enabled: true
+    create-schemas: true
+    baseline-on-migrate: true
+    default-schema: webapp
+    locations: classpath:db/migration
+
+  datasource:
+    url: jdbc:postgresql://animal-shelter-db:5432/shelter
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+    properties:
+      hibernate:
+        batch_size: 50
+        fetch_size: 50
+        show_sql: true
+        format_sql: true
+        default_schema: webapp
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: your-mail
+    password: your-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          timeout: 3000
+          writetimeout: 3000
+          connectiontimeout: 3000
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: your-id
+            client-secret: your-secret
+            redirect-uri: http://localhost:8080/login/oauth2/code/google
+            scope: openid, email, profile
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: org.shelter.app.http
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    enabled: true
+    endpoint:
+      metrics:
+        enabled: true
+
