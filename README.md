@@ -1,33 +1,28 @@
-# Rental of Pets
+# Animal Shelter
 
 ## Overview
-"Rental of Pets" is a web application designed to facilitate the rental of pets. It allows users to rent pets for a specified duration to see if they can live with animals. Users can view available pets, make reservations, and manage their bookings. The application is built using Java with Spring Boot on the backend and Thymeleaf for server-side rendering. The site is made for people living in Szczecin and all payments are made directly in person 
+Animal Shelter is a platform where users can submit requests to become guardians for animals. Users fill out their personal information and apply for guardianship. The shelter’s administration reviews each request and can approve or decline it.
 
 ## Features
-- User Authorization and Authentication
-- Viewing Available Pets
-- Making and Managing Bookings
-- User Notifications
-- User settings
-- Admin Panel for Managing Pets, Bookings, Users
-- Spring Boot Admin Server
-- Google Map
-- Internationalization
+- User authorization and authentication
+- Viewing animals available for guardianship
+- Submitting and managing applications
+- Admin panel for reviewing and managing applications and animals
+- Email notifications
+- Application status tracking for users
+- Admin monitoring system with Spring Boot Admin
 
 ## Technologies Used
 - Java
-- Spring(Core,Boot,Data,MVC,Security,Validation)
-- Thymeleaf
+- Spring Framework: Core, Boot, Data JPA, MVC, Security, Validation
+- Flyway
 - Hibernate
 - PostgreSQL
 - MapStruct
 - Lombok
 - Maven
 - Docker
-- QueryDSL
-- Liquibase
 - Swagger
-- CSS3
 
 ## Getting Started
 
