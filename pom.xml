@@ -2,12 +2,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.yaroslaavl</groupId>
-    <artifactId>rental-of-pets</artifactId>
+    <groupId>org.shelter</groupId>
+    <artifactId>animal-shelter-app</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>rental-of-pets</name>
-    <description>rental-of-pets</description>
+    <name>animal-shelter-app</name>
+    <description>animal-shelter-app</description>
 
     <properties>
         <java.version>17</java.version>
@@ -25,14 +25,8 @@
     </dependencyManagement>
 
     <modules>
-        <module>rental-pets-service</module>
-        <module>admin-server-service</module>
+        <module>animal-shelter</module>
+        <module>admin-server</module>
     </modules>
 
-    <build>
-        <pluginManagement>
-            <plugins>
-            </plugins>
-        </pluginManagement>
-    </build>
 </project>
