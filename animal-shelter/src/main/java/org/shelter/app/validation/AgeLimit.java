@@ -14,7 +14,7 @@ public @interface AgeLimit {
 
     int minAge() default 16;
     int minYear() default 1920;
-    String message() default "User must be at least 16 years old";
+    String message() default "User must be at least 18 years old";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 
