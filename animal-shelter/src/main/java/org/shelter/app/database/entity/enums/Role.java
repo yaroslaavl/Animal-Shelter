@@ -7,7 +7,7 @@ public enum Role implements GrantedAuthority {
 
     ADMIN,
 
-    AUTHORISED_USER,
+    VERIFIED_USER,
 
     VET;
 

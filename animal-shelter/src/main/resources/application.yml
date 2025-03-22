@@ -76,4 +76,3 @@ management:
     endpoint:
       metrics:
         enabled: true
-

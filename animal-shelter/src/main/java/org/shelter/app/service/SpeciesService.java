@@ -5,12 +5,14 @@ import org.shelter.app.database.repository.SpeciesRepository;
 import org.shelter.app.dto.SpeciesReadDto;
 import org.shelter.app.mapper.SpeciesMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SpeciesService {
 
     private final SpeciesRepository speciesRepository;

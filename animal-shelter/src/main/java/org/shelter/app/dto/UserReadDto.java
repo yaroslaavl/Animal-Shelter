@@ -31,7 +31,5 @@ public class UserReadDto {
 
     Boolean emailVerified;
 
-    String emailVerificationToken;
-
     LocalDateTime createdAt;
 }

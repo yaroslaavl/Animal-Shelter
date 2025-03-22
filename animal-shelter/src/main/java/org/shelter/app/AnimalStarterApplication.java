@@ -6,9 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
-public class WebAppStarterApplication {
+public class AnimalStarterApplication {
     public static void main(String[] args) {
-        SpringApplication.run(WebAppStarterApplication.class, args);
+        SpringApplication.run(AnimalStarterApplication.class, args);
 
     }
 }

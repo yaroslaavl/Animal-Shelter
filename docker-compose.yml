@@ -14,6 +14,20 @@ services:
     networks:
       - animal-shelter-net
 
+  redis:
+    image: redis:latest
+    container_name: redis-app
+    environment:
+      ALLOW_EMPTY_PASSWORD: yes
+      REDIS_DISABLE_COMMANDS: FLUSHDB,FLUSHALL
+    volumes:
+      - redis_app_data:/data
+    ports:
+      - "6380:6379"
+    restart: always
+    networks:
+      - animal-shelter-net
+
   animal-shelter-app:
     build:
       context: .
@@ -24,7 +38,7 @@ services:
     networks:
       - animal-shelter-net
     depends_on:
-      - animal-shelter-db
+      - redis
 
   admin-server:
     build:
@@ -47,3 +61,5 @@ networks:
 volumes:
   postgres-data:
     driver: local
+
+  redis_app_data:
