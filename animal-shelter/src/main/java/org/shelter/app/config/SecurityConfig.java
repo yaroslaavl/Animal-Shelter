@@ -1,79 +1,68 @@
 package org.shelter.app.config;
 
-import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.shelter.app.dto.UserCreateDto;
+import org.shelter.app.filter.ApiKeyFilter;
 import org.shelter.app.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-import static org.shelter.app.database.entity.enums.Role.ADMIN;
-import static org.shelter.app.database.entity.enums.Role.AUTHORISED_USER;
+import static org.shelter.app.database.entity.enums.Role.VERIFIED_USER;
 
+@EnableAsync
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final UserService userService;
-
-    @Resource
-    UserDetailsService userDetailsService;
+    private final ApiKeyFilter apiKeyFilter;
 
     @Bean
     @SneakyThrows
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
-
-                .formLogin(formLogin -> formLogin
-                        .loginPage("/login")
-                        .successHandler(new CustomAuthenticationSuccessHandler())
-                )
-
-                .requestCache(requestCache -> requestCache
-                        .requestCache(new HttpSessionRequestCache())
-                )
-
                 .authorizeHttpRequests(url -> url
-                        .requestMatchers("/login", "/users/registration", "/v3/api-docs/**", "/swagger-ui/**", "/firstPage", "/pets", "/company-info", "/blog", "/api/pets", "/api/users/**").permitAll()
-                        .requestMatchers("/user/settings/**", "/pet/booking/**", "/pet/bookings/**", "/user/notifications", "/api/user/**").authenticated()
-                        .requestMatchers("/admin/**").hasAuthority(ADMIN.getAuthority())
+                        .requestMatchers(
+                                "/actuator",
+                                "/actuator/**",
+                                "/api/user/login",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/api/user/create",
+                                "/api/user/activate",
+                                "/error").permitAll()
+                        .requestMatchers(
+                                "/api/user/settings/account/resend-activation-code",
+                                "/api/user/delete-account",
+                                "/api/user/resend-activation",
+                                "/api/user/update"
+                        ).authenticated()
                 )
-
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login")
-                        .deleteCookies("JSESSIONID")
-                )
-
-                .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            accessDeniedException.printStackTrace();
-                            response.sendRedirect("/forbidden-error");
-                        })
-                )
-
+                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oauth2Login -> oauth2Login
-                        .loginPage("/login")
-                        .successHandler(new CustomAuthenticationSuccessHandler())
                         .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
                                 .oidcUserService(oidcUserService())
                         )
@@ -82,12 +71,26 @@ public class SecurityConfig {
         return httpSecurity.build();
     }
 
+    @Bean
+    public RedisTemplate<?, ?> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<?, ?> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+
+        return template;
+    }
+
+    @Bean
+    @SneakyThrows
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
+        return configuration.getAuthenticationManager();
+    }
+
     private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService(){
         return userRequest -> {
             String email = userRequest.getIdToken().getClaim("email");
 
             if (userService.findByUsername(email).isEmpty()) {
-                userService.create(UserCreateDto.createNewUser(email, "User", "User", AUTHORISED_USER,  true,null, LocalDateTime.now()));
+                userService.create(UserCreateDto.createNewUser(email, "User", "User", VERIFIED_USER,  true,null, LocalDateTime.now()));
             }
             UserDetails userDetails = userService.loadUserByUsername(email);
             DefaultOidcUser defaultOidcUser = new DefaultOidcUser(userDetails.getAuthorities(), userRequest.getIdToken());
@@ -100,4 +103,5 @@ public class SecurityConfig {
                             : method.invoke(defaultOidcUser,args));
         };
     }
+
 }
