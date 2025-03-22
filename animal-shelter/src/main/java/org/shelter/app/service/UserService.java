@@ -4,8 +4,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.shelter.app.dto.UserCreateDto;
+import org.shelter.app.dto.UserUpdateDto;
+import org.shelter.app.exception.TokenException;
+import org.shelter.app.exception.UserAccountAlreadyActivated;
+import org.shelter.app.exception.UserNotFoundException;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,7 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 import org.shelter.app.database.entity.enums.Role;
 import org.shelter.app.database.entity.User;
 import org.shelter.app.database.repository.UserRepository;
@@ -21,12 +27,13 @@ import org.shelter.app.dto.UserReadDto;
 import org.shelter.app.mapper.UserMapper;
 
 import java.io.*;
-import java.net.InetAddress;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -38,14 +45,11 @@ public class UserService implements UserDetailsService {
     private final MailService mailService;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @SneakyThrows
     @Transactional
     public UserReadDto create(UserCreateDto userDto) {
-        InetAddress localhost;
-        localhost = InetAddress.getLocalHost();
-        String ip = localhost.getHostAddress();
-
         String activationToken = UUID.randomUUID().toString();
         UserReadDto userReadDto = Optional.of(userDto)
                 .map(dto -> {
@@ -53,22 +57,99 @@ public class UserService implements UserDetailsService {
                     user.setRole(Role.USER);
                     user.setEmailVerificationToken(activationToken);
                     user.setEmailVerified(false);
+                    user.setCreatedAt(LocalDateTime.now());
                     usersOfApp(userDto);
                     return userRepository.saveAndFlush(user);
                 })
                 .map(userMapper::toDto)
-                .orElseThrow();
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!StringUtils.isEmpty(userDto.getEmail())) {
             String message = String.format(
                     "Hello, %s! \n" +
-                            "Welcome to our family. Please, visit the following link to activate your account:  http://" + ip + ":8080/activate?token=%s",
+                            "Welcome to our family. Please, visit the following link to activate your account:  http://localhost:8080/api/user/activate?token=%s",
                     userDto.getEmail(),
                     activationToken
             );
             mailService.send(userDto.getEmail(), "Activation code", message);
+            redisTemplate.opsForValue().set(userDto.getEmail() + ":activationToken", activationToken, 1, TimeUnit.DAYS);
         }
         return userReadDto;
+    }
+
+    @SneakyThrows
+    @Transactional
+    public boolean resendActivationCode(){
+        Optional<User> optionalUser = userRepository.findByEmail(securityContext());
+        if (optionalUser.isPresent()) {
+            User user = optionalUser.get();
+            String activationToken = UUID.randomUUID().toString();
+
+            if (user.getEmailVerified()) {
+                throw new UserAccountAlreadyActivated("User account already activated");
+            }
+
+            user.setEmailVerificationToken(activationToken);
+            userRepository.saveAndFlush(user);
+            String confirmationLink = "http://localhost:8080/api/user/activate?token=" + activationToken;
+
+            if (!StringUtils.isEmpty(user.getEmail())) {
+                String message = String.format(
+                        "You have got a new email verification link to activate your account." +
+                                " Please click the link below to confirm your email address and complete your registration: " + confirmationLink,
+                        user.getEmail(),
+                        activationToken
+                );
+                mailService.send(user.getEmail(), "Activation code", message);
+
+                log.info("Email: {}, Body: {}",
+                        user.getEmail(),
+                        "You have got a new email verification link to activate your account." +
+                                " Please click the link below to confirm your email address and complete your registration: " + confirmationLink);
+                redisTemplate.opsForValue().set(user.getEmail() + ":activationToken", activationToken, 10, TimeUnit.MINUTES);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Transactional
+    public boolean activation(String activationToken){
+        User user = userRepository.findByEmailVerificationToken(activationToken)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String storedToken = redisTemplate.opsForValue().get(user.getEmail() + ":activationToken");
+        if (storedToken == null) {
+            log.error("Token has expired or does not exist in Redis: {}", storedToken);
+            throw new TokenException("Email verification has expired. Please resend the activation message to your email address.");
+        }
+
+        if (!storedToken.equals(storedToken)) {
+            log.error("Token mismatch: expected {} but found {}", storedToken, storedToken);
+            throw new TokenException("Email verification has expired. Please resend the activation message to your email address.");
+        }
+        user.setEmailVerified(true);
+        user.setRole(Role.VERIFIED_USER);
+        userRepository.saveAndFlush(user);
+
+        redisTemplate.delete(user.getEmail() + ":activationToken");
+        log.info("User {} has been verified", user.getEmail());
+        return true;
+    }
+
+    @Transactional
+    public void delete(){
+        User user = userRepository.findByEmail(securityContext())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String apiKey = redisTemplate.opsForValue().get("user:" + user.getEmail() + ":api_key");
+
+        if (apiKey == null) {
+            throw new TokenException("User login token has expired");
+        }
+        redisTemplate.delete("user:" + user.getEmail() + ":api_key");
+        redisTemplate.delete("x-api-key:" + apiKey);
+        userRepository.delete(user);
     }
 
     @SneakyThrows
@@ -79,54 +160,28 @@ public class UserService implements UserDetailsService {
                         .withLocale(new Locale("pl", "PL")));
 
         try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter("rental-pets-service/src/main/resources/newUsersOfApp.txt", true))) {
+                new FileWriter("animal-shelter/src/main/resources/newUsersOfApp.txt", true))) {
             String record = String.format("%s   |   %s%n", userCreateEditDto.getEmail(), formattedTime);
+
             bufferedWriter.write(record);
         } catch (IOException e) {
             log.error("Exception: " + e);
         }
     }
 
-    @SneakyThrows
     @Transactional
-    public boolean resendActivationCode(String username){
-        InetAddress localhost;
-        localhost = InetAddress.getLocalHost();
-        String ip = localhost.getHostAddress();
+    public UserReadDto updateUserData(UserUpdateDto userUpdateDto) {
+        User user = userRepository.findByEmail(securityContext())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        Optional<User> optionalUser = userRepository.findByEmail(username);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            String activationToken = UUID.randomUUID().toString();
-            user.setEmailVerificationToken(activationToken);
-            user.setEmailVerified(false);
-            userRepository.save(user);
+        Optional.ofNullable(userUpdateDto.getBirthDate()).ifPresent(user::setBirthDate);
+        Optional.ofNullable(userUpdateDto.getFirstName()).ifPresent(user::setFirstName);
+        Optional.ofNullable(userUpdateDto.getLastName()).ifPresent(user::setLastName);
+        Optional.ofNullable(userUpdateDto.getAddress()).ifPresent(user::setAddress);
+        Optional.ofNullable(userUpdateDto.getPhone()).ifPresent(user::setPhone);
 
-            if (!StringUtils.isEmpty(user.getEmail())) {
-                String message = String.format(
-                        "Hello, %s! \n" +
-                                "Welcome to our family. Please, visit the following link to activate your account: http://" + ip + ":8080/activate?token=%s",
-                        user.getEmail(),
-                        activationToken
-                );
-                mailService.send(user.getEmail(), "Activation code", message);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Transactional
-    public boolean activation(String activationToken){
-        User user = userRepository.findByEmailVerificationToken(activationToken);
-
-        if(user != null){
-            user.setEmailVerified(true);
-            userRepository.save(user);
-            return true;
-        } else {
-            throw new IllegalArgumentException("Not found");
-        }
+        User updatedUser = userRepository.saveAndFlush(user);
+        return userMapper.toDto(updatedUser);
     }
 
     public Optional<User> findByUsername(String username) {
@@ -134,53 +189,32 @@ public class UserService implements UserDetailsService {
     }
 
     public User findUserById(Long id){
-        Optional<User> optionalUser = userRepository.findById(id);
-        return optionalUser.orElse(null);
-    }
-
-   /* @Transactional
-    public Optional<User> update(Long id, UserCreateDto userCreateEditDto) {
         return userRepository.findById(id)
-                .map(user -> {
-                    uploadImage(userCreateEditDto.getProfilePicture());
-                    userMapper.updateEntityFromDto(userCreateEditDto, user);
-                    return userRepository.saveAndFlush(user);
-                });
-    }*/
-
-    @Transactional
-    public boolean delete(Long id){
-        return userRepository.findById(id)
-                .map(entity -> {
-                    userRepository.delete(entity);
-                    userRepository.flush();
-                    return true;
-                })
-                .orElse(false);
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        if (username == null || username.isEmpty()) {
-            throw new UsernameNotFoundException("User not found");
-        }
-        return userRepository.findByEmail(username)
-                .map(user -> {
-                    Set<GrantedAuthority> authorities = new HashSet<>();
-                    authorities.add(new SimpleGrantedAuthority(user.getRole().toString()));
-                    return new org.springframework.security.core.userdetails.User(
-                            user.getEmail(),
-                            user.getPassword(),
-                            authorities
-                    );
-                })
-                .orElseThrow(() -> new UsernameNotFoundException("Failed to retrieve user:" + username));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
     }
 
     public List<UserReadDto> findAll(){
         return userRepository.findAll().stream()
                 .map(userMapper::toDto)
                 .toList();
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        if (username == null || username.isEmpty()) {
+            throw new UserNotFoundException("User not found");
+        }
+        return userRepository.findByEmail(username)
+                .map(user -> {
+                    Set<GrantedAuthority> authorities = new HashSet<>();
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().toString()));
+                    return new org.springframework.security.core.userdetails.User(
+                            user.getEmail(),
+                            user.getPassword(),
+                            authorities
+                    );
+                })
+                .orElseThrow(() -> new UserNotFoundException("Failed to retrieve user:" + username));
     }
 
     //TODO: method not finished
@@ -204,5 +238,10 @@ public class UserService implements UserDetailsService {
             }
         }
         return false;
+    }
+
+    private String securityContext() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication.getName();
     }
 }

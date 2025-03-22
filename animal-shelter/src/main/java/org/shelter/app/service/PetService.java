@@ -26,18 +26,6 @@ public class PetService {
     private final PetRepository petRepository;
     private final PetMapper petMapper;
 
-    /*public Page<PetReadDto> findAll(PetFilter petFilter, Pageable pageable){
-        var predicate = QPredicate.builder()
-                .add(petFilter.species(),pet.species::eq)
-                .add(petFilter.age(),pet.age::eq)
-                .add(petFilter.gender(),pet.gender::eq)
-                .add(petFilter.isAvailable(),pet.isAvailable::eq)
-                .buildAnd();
-        log.info("Filters: {} ",petFilter);
-        return petRepository.findAll(predicate,pageable)
-                .map(petMapper::toDto);
-    }*/
-
     public Optional<Pet> findPetById(Long petId) {
         return petRepository.findById(petId);
     }
