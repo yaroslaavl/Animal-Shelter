@@ -44,8 +44,7 @@ CREATE TABLE IF NOT EXISTS webapp.medical_record
     diagnosis TEXT,
     treatment TEXT,
     prescription TEXT,
-    examination_date DATE,
-    created_at TIMESTAMP DEFAULT NOW()
+    examination_date TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS webapp.adoption_request
