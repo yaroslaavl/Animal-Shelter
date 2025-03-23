@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -32,6 +33,7 @@ import static org.shelter.app.database.entity.enums.Role.VERIFIED_USER;
 
 @EnableAsync
 @Configuration
+@EnableScheduling
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -58,8 +60,26 @@ public class SecurityConfig {
                                 "/api/user/settings/account/resend-activation-code",
                                 "/api/user/delete-account",
                                 "/api/user/resend-activation",
-                                "/api/user/update"
+                                "/api/user/update",
+                                "/api/user/reset-password"
+
                         ).authenticated()
+                        .requestMatchers(
+                                "/api/user/set-vetRole"
+                        ).hasRole("ADMIN")
+                        .requestMatchers(
+                                "/api/species/add",
+                                "/api/species/delete/*",
+                                "/api/species/dynamic-search",
+
+                                "/api/pet/addNew",
+                                "/api/pet/add-to-adoption-list/*",
+
+                                "/api/medical-record/all/*"
+                        ).hasAnyRole("ADMIN", "VET")
+                        .requestMatchers(
+                                "/api/medical-record/create"
+                        ).hasAnyRole( "VET")
                 )
                 .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oauth2Login -> oauth2Login
