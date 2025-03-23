@@ -35,6 +35,9 @@ public class MedicalRecord  {
     @Column(name = "prescription")
     private String prescription;
 
+    @Column(name = "is_healthy")
+    private Boolean isHealthy;
+
     @Column(name = "examination_date")
     private LocalDateTime examinationDate;
 }
