@@ -22,5 +22,7 @@ public class MedicalRecordReadDto {
 
     String prescription;
 
+    Boolean isHealthy;
+
     LocalDateTime examinationDate;
 }

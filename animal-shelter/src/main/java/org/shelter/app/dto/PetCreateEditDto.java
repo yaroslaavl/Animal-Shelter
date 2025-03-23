@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class PetCreateEditDto {
 
-    private Species species;
+    private Long speciesId;
 
     private String breed;
 
