@@ -3,11 +3,8 @@ package org.shelter.app.service;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.shelter.app.dto.UserCreateDto;
-import org.shelter.app.dto.UserUpdateDto;
-import org.shelter.app.exception.TokenException;
-import org.shelter.app.exception.UserAccountAlreadyActivated;
-import org.shelter.app.exception.UserNotFoundException;
+import org.shelter.app.dto.*;
+import org.shelter.app.exception.*;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -23,7 +20,6 @@ import org.springframework.util.StringUtils;
 import org.shelter.app.database.entity.enums.Role;
 import org.shelter.app.database.entity.User;
 import org.shelter.app.database.repository.UserRepository;
-import org.shelter.app.dto.UserReadDto;
 import org.shelter.app.mapper.UserMapper;
 
 import java.io.*;
@@ -86,7 +82,7 @@ public class UserService implements UserDetailsService {
             String activationToken = UUID.randomUUID().toString();
 
             if (user.getEmailVerified()) {
-                throw new UserAccountAlreadyActivated("User account already activated");
+                throw new UserAccountAlreadyActivatedException("User account already activated");
             }
 
             user.setEmailVerificationToken(activationToken);
@@ -184,19 +180,37 @@ public class UserService implements UserDetailsService {
         return userMapper.toDto(updatedUser);
     }
 
+    @Transactional
+    public boolean resetPassword(UserResetPasswordDto userResetPasswordDto) {
+        User user = userRepository.findByEmail(securityContext())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(userResetPasswordDto.getOldPassword(), user.getPassword())) {
+            throw new PasswordNotMatchException("Old password does not match");
+        }
+        user.setPassword(passwordEncoder.encode(userResetPasswordDto.getNewPassword()));
+        userRepository.save(user);
+
+        return true;
+    }
+
+    @Transactional
+    public void vetAssigment(VetRoleAssignmentDto vetRoleAssignmentDto) {
+        User user = userRepository.findById(vetRoleAssignmentDto.getUserId())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (user.getRole() == Role.VET) {
+            throw new VetRoleException("User already has a vet role");
+        }
+
+        user.setRole(Role.VET);
+        user.setEmailVerified(Boolean.TRUE);
+        user.setVetCode(vetRoleAssignmentDto.getVetCode());
+        userRepository.save(user);
+    }
+
     public Optional<User> findByUsername(String username) {
         return userRepository.findByEmail(username);
-    }
-
-    public User findUserById(Long id){
-        return userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
-    }
-
-    public List<UserReadDto> findAll(){
-        return userRepository.findAll().stream()
-                .map(userMapper::toDto)
-                .toList();
     }
 
     @Override
@@ -215,29 +229,6 @@ public class UserService implements UserDetailsService {
                     );
                 })
                 .orElseThrow(() -> new UserNotFoundException("Failed to retrieve user:" + username));
-    }
-
-    //TODO: method not finished
-    @Transactional
-    public boolean resetPassword(String username,String password){
-        Optional<User> userOptional = userRepository.findByEmail(username);
-
-        if(userOptional.isPresent()){
-            User user = userOptional.get();
-            user.setPassword(password);
-            userRepository.save(user);
-
-            if (!StringUtils.isEmpty(user.getEmail())) {
-                String message = String.format(
-                        "Hello, %s! \n" +
-                                "You can reset your password clicking this link: http://localhost:8080/resetPassword",
-                        user.getEmail()
-                );
-                mailService.send(user.getEmail(), "Activation code", message);
-                return true;
-            }
-        }
-        return false;
     }
 
     private String securityContext() {

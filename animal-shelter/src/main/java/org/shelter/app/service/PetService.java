@@ -1,44 +1,76 @@
 package org.shelter.app.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.shelter.app.database.entity.MedicalRecord;
+import org.shelter.app.database.entity.enums.PetStatus;
+import org.shelter.app.database.repository.MedicalRecordRepository;
+import org.shelter.app.database.repository.SpeciesRepository;
+import org.shelter.app.dto.PetCreateEditDto;
+import org.shelter.app.dto.PetReadDto;
+import org.shelter.app.exception.MedicalRecordNotFoundException;
+import org.shelter.app.exception.PetAlreadyRegisteredException;
+import org.shelter.app.exception.PetNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.shelter.app.database.entity.Pet;
 import org.shelter.app.database.repository.PetRepository;
-import org.shelter.app.dto.PetCreateEditDto;
-import org.shelter.app.dto.PetFilter;
-import org.shelter.app.dto.PetReadDto;
 import org.shelter.app.mapper.PetMapper;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-@Slf4j
 public class PetService {
 
     private final PetRepository petRepository;
     private final PetMapper petMapper;
+    private final MedicalRecordRepository medicalRecordRepository;
+    private final SpeciesRepository speciesRepository;
 
-    public Optional<Pet> findPetById(Long petId) {
-        return petRepository.findById(petId);
+    @Transactional
+    public PetReadDto addPet(PetCreateEditDto petCreateEditDto) {
+        if (petRepository.findPetByName(petCreateEditDto.getName()).isPresent()) {
+            throw new PetAlreadyRegisteredException("Pet already exists in a system");
+        }
+
+        Pet pet = Pet.builder()
+                .species(speciesRepository.findById(petCreateEditDto.getSpeciesId()).orElseThrow(() -> new PetNotFoundException("Species not found")))
+                .name(petCreateEditDto.getName())
+                .breed(petCreateEditDto.getBreed())
+                .age(petCreateEditDto.getAge())
+                .gender(petCreateEditDto.getGender())
+                .description(petCreateEditDto.getDescription())
+                .status(PetStatus.NOT_AVAILABLE)
+                .build();
+
+        return petMapper.toDto(petRepository.save(pet));
     }
 
-    /*@Transactional
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public void updatePet(Long id, PetCreateEditDto petCreateEditDto) {
-        Pet petToUpdate = petRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Pet not found with id: " + id));
-        petMapper.updateEntityFromDto(petCreateEditDto,petToUpdate);
+    @Transactional
+    public boolean addPetToAdoptionList(Long id) {
+        Pet pet = petRepository.findById(id)
+                .orElseThrow(() -> new PetNotFoundException("Pet not found"));
 
-        petRepository.saveAndFlush(petToUpdate);
-    }*/
+        if (pet.getStatus() == PetStatus.AVAILABLE) {
+            throw new PetAlreadyRegisteredException("Pet already available");
+        }
 
+        MedicalRecord lastMedicalRecord = medicalRecordRepository.findLastMedicalRecord(pet.getId())
+                .orElseThrow(() -> new MedicalRecordNotFoundException("Medical record not found"));
+
+        if (lastMedicalRecord.getExaminationDate().plusDays(30).isAfter(LocalDateTime.now())
+                && lastMedicalRecord.getIsHealthy() == Boolean.TRUE) {
+
+            pet.setStatus(PetStatus.AVAILABLE);
+            petRepository.save(pet);
+            return true;
+        }
+        return false;
+    }
 }
 
