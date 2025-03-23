@@ -5,10 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.shelter.app.database.entity.enums.Role;
 import org.shelter.app.database.repository.UserRepository;
-import org.shelter.app.dto.LoginDto;
-import org.shelter.app.dto.UserCreateDto;
-import org.shelter.app.dto.UserReadDto;
-import org.shelter.app.dto.UserUpdateDto;
+import org.shelter.app.dto.*;
 import org.shelter.app.service.UserService;
 import org.shelter.app.validation.CreateAction;
 import org.shelter.app.validation.EditAction;
@@ -98,5 +95,22 @@ public class UserController {
     @PutMapping("/update")
     public ResponseEntity<UserReadDto> updateUserData(@RequestBody @Validated(EditAction.class) UserUpdateDto userUpdateDto) {
         return ResponseEntity.ok(userService.updateUserData(userUpdateDto));
+    }
+
+    @PutMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody @Validated(EditAction.class) UserResetPasswordDto userResetPasswordDto) {
+        boolean isChanged = userService.resetPassword(userResetPasswordDto);
+
+        if (isChanged) {
+            return ResponseEntity.ok("Password changed successfully");
+        }
+        return ResponseEntity.ok("Password changed has failed");
+    }
+
+    @PutMapping("/set-vetRole")
+    public ResponseEntity<String> vetAssigment(@RequestBody VetRoleAssignmentDto vetRoleAssignmentDto) {
+        userService.vetAssigment(vetRoleAssignmentDto);
+
+        return ResponseEntity.ok("User with id: " + vetRoleAssignmentDto.getUserId() + " got a vet role");
     }
 }

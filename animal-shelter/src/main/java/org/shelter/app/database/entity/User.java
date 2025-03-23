@@ -37,8 +37,11 @@ public class User {
 
     private String address;
 
-    @Column(unique = true)
+    @Column(unique = true, name = "phone")
     private String phone;
+
+    @Column(unique = true, name = "vet_code")
+    private String vetCode;
 
     @Column(name = "profile_picture")
     private String profilePicture;

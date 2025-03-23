@@ -12,8 +12,6 @@ public class UserReadDto {
 
     String email;
 
-    String password;
-
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     LocalDate birthDate;
 
@@ -24,6 +22,8 @@ public class UserReadDto {
     String address;
 
     String phone;
+
+    String vetCode;
 
     String profilePicture;
 

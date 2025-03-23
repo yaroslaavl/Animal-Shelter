@@ -15,6 +15,9 @@ public class ContactNumberValidator implements ConstraintValidator<ContactNumber
 
     @Override
     public boolean isValid(String homePhone, ConstraintValidatorContext constraintValidatorContext) {
+        if (homePhone == null || homePhone.isEmpty()) {
+            return true;
+        }
         String formattedNumberOfPhone = homePhone.replaceAll("[^0-9]","");
         Pattern regex = Pattern.compile("\\d{9}");
         Matcher matcher = regex.matcher(formattedNumberOfPhone);
