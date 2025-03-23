@@ -18,4 +18,7 @@ public interface PetRepository extends JpaRepository<Pet,Long> {
             "JOIN FETCH p.species WHERE p.id = :id")
     Optional<Pet> findById(@Param("id") Long id);
 
+    Optional<Pet> findPetByName(String name);
+
+    Optional<Pet> findPetById(Long id);
 }
