@@ -31,6 +31,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
                 || servletPath.equals("/api/user/create")
                 || servletPath.equals("/api/user/activate")
                 || servletPath.startsWith("/actuator/")
+                || servletPath.equals("/api/pet/available")
                 || servletPath.equals("/actuator");
     }
 
