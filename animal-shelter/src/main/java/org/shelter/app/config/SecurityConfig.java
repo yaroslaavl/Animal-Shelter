@@ -55,18 +55,20 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/api/user/create",
                                 "/api/user/activate",
+                                "/api/pet/available",
                                 "/error").permitAll()
+
                         .requestMatchers(
                                 "/api/user/settings/account/resend-activation-code",
                                 "/api/user/delete-account",
                                 "/api/user/resend-activation",
                                 "/api/user/update",
-                                "/api/user/reset-password"
+                                "/api/notification/all-by-user",
+                                "/api/user/reset-password").authenticated()
 
-                        ).authenticated()
                         .requestMatchers(
-                                "/api/user/set-vetRole"
-                        ).hasRole("ADMIN")
+                                "/api/user/set-vetRole").hasRole("ADMIN")
+
                         .requestMatchers(
                                 "/api/species/add",
                                 "/api/species/delete/*",
@@ -75,18 +77,16 @@ public class SecurityConfig {
                                 "/api/pet/addNew",
                                 "/api/pet/add-to-adoption-list/*",
 
-                                "/api/medical-record/all/*"
-                        ).hasAnyRole("ADMIN", "VET")
+                                "/api/medical-record/all/*",
+                                "/api/pet/all-statuses").hasAnyRole("ADMIN", "VET")
+
                         .requestMatchers(
-                                "/api/medical-record/create"
-                        ).hasAnyRole( "VET")
+                                "/api/medical-record/create").hasAnyRole( "VET")
+
+                        .requestMatchers(
+                                "/api/adoption-request/send").hasAnyRole("VERIFIED_USER", "VET", "ADMIN")
                 )
-                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(oauth2Login -> oauth2Login
-                        .userInfoEndpoint(userInfoEndpoint -> userInfoEndpoint
-                                .oidcUserService(oidcUserService())
-                        )
-                );
+                .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class);
 
         return httpSecurity.build();
     }
@@ -104,24 +104,4 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
         return configuration.getAuthenticationManager();
     }
-
-    private OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService(){
-        return userRequest -> {
-            String email = userRequest.getIdToken().getClaim("email");
-
-            if (userService.findByUsername(email).isEmpty()) {
-                userService.create(UserCreateDto.createNewUser(email, "User", "User", VERIFIED_USER,  true,null, LocalDateTime.now()));
-            }
-            UserDetails userDetails = userService.loadUserByUsername(email);
-            DefaultOidcUser defaultOidcUser = new DefaultOidcUser(userDetails.getAuthorities(), userRequest.getIdToken());
-            Set<Method> methods = Set.of(UserDetails.class.getMethods());
-            return (OidcUser) Proxy.newProxyInstance(
-                    SecurityConfig.class.getClassLoader(),
-                    new Class[]{UserDetails.class, OidcUser.class},
-                    (proxy, method, args) -> methods.contains(method)
-                            ? method.invoke(userDetails,args)
-                            : method.invoke(defaultOidcUser,args));
-        };
-    }
-
 }
