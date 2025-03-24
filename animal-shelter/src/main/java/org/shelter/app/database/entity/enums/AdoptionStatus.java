@@ -1,9 +1,9 @@
 package org.shelter.app.database.entity.enums;
 
 public enum AdoptionStatus {
-    ADOPTED,
+    REJECTED,
 
-    AVAILABLE,
+    APPROVED,
 
-    NOT_AVAILABLE;
+    IN_PROGRESS
 }

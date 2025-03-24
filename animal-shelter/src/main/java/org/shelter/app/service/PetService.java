@@ -3,23 +3,26 @@ package org.shelter.app.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.shelter.app.database.entity.MedicalRecord;
+import org.shelter.app.database.entity.enums.Gender;
 import org.shelter.app.database.entity.enums.PetStatus;
 import org.shelter.app.database.repository.MedicalRecordRepository;
 import org.shelter.app.database.repository.SpeciesRepository;
+import org.shelter.app.database.specification.CustomSpecifications;
 import org.shelter.app.dto.PetCreateEditDto;
 import org.shelter.app.dto.PetReadDto;
 import org.shelter.app.exception.MedicalRecordNotFoundException;
 import org.shelter.app.exception.PetAlreadyRegisteredException;
 import org.shelter.app.exception.PetNotFoundException;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.shelter.app.database.entity.Pet;
 import org.shelter.app.database.repository.PetRepository;
 import org.shelter.app.mapper.PetMapper;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -71,6 +74,21 @@ public class PetService {
             return true;
         }
         return false;
+    }
+
+    public List<PetReadDto> getPetsByFilters(String breed, List<PetStatus> statuses, List<Gender> genders, String speciesName) {
+        Specification<Pet> specification =
+                Specification
+                        .where(CustomSpecifications.hasSpeciesName(speciesName))
+                        .and(CustomSpecifications.hasBreed(breed))
+                        .and(CustomSpecifications.hasStatus(statuses))
+                        .and(CustomSpecifications.hasGender(genders));
+
+        return petRepository.findAll(specification)
+                .stream()
+                .map(petMapper::toDto)
+                .collect(Collectors.toList());
+
     }
 }
 

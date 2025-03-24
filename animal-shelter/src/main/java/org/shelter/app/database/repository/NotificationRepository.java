@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification,Long> {
 
-    @Query("SELECT n FROM Notification n WHERE n.user = :user")
-    List<Notification> findAllByUser(@Param("user") User user);
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId")
+    List<Notification> findAllByUser(@Param("userId") Long userId);
 
 }
