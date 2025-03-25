@@ -17,6 +17,7 @@ Animal Shelter is a platform where users can submit requests to become guardians
 - Spring Framework: Core, Boot, Data JPA, MVC, Security, Validation
 - Flyway
 - Hibernate
+- Redis
 - PostgreSQL
 - MapStruct
 - Lombok
@@ -38,12 +39,6 @@ Animal Shelter is a platform where users can submit requests to become guardians
 mvn clean install
 
  ```
-### DataBase
-![db-structure](https://github.com/yaroslaavl/Rental-of-Pets-Szczecin/assets/149341488/88be752c-4db4-410e-96d2-2c010f00cf97)
-
-### Setup PostgreSQL
-![image](https://github.com/yaroslaavl/Rental-of-Pets-Szczecin/assets/149341488/7ee16c15-4dd7-4429-b16f-647814da2cbb)
-
 
 ### Configuring Email Settings
 To properly configure email settings in your application:
@@ -69,8 +64,6 @@ Copy and Save the Key:
 Once generated, copy the 16-digit key or password provided by the email service provider. Ensure to save it securely as it will not be shown again.
 
 Ensure these settings are correctly configured in application.yml file to enable email functionality in application.
-
-![image](https://github.com/yaroslaavl/Rental-of-Pets-Szczecin/assets/149341488/7777e2a4-0728-4300-8501-0a8f91830624)
 
 ### Configuring OAuth2 for Google Authentication
 To configure OAuth2 for Google authentication:
