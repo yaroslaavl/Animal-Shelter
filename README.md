@@ -16,7 +16,7 @@ Animal Shelter is a platform where users can submit requests to become guardians
 
 ## Technologies Used
 - Java
-- Spring Framework: Core, Boot, Data JPA, MVC, Security, Validation
+- Spring (Core, Boot, Data JPA, MVC, Security), Jakarta Validation (Hibernate Validator)
 - Flyway
 - Hibernate
 - Redis
