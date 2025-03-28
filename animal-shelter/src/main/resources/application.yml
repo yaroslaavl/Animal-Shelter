@@ -2,6 +2,16 @@ server:
   port: 8080
 
 spring:
+  boot:
+    admin:
+      client:
+        url: http://admin-server:8085
+        username: admin
+        password: javaguru
+  data:
+    redis:
+      host: redis
+      port: 6379
   flyway:
     enabled: true
     create-schemas: true
@@ -24,8 +34,6 @@ spring:
       hibernate:
         batch_size: 50
         fetch_size: 50
-        show_sql: true
-        format_sql: true
         default_schema: webapp
 
   mail:
@@ -46,22 +54,12 @@ spring:
             port: 465
             class: javax.net.ssl.SSLSocketFactory
 
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: your-id
-            client-secret: your-secret
-            redirect-uri: http://localhost:8080/login/oauth2/code/google
-            scope: openid, email, profile
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-  api-docs:
-    path: /v3/api-docs
-  packages-to-scan: org.shelter.app.http
+minio:
+  url: http://minio:9000
+  accessKey: admin
+  secretKey: password
+  bucket-name: image-bucket
+  secure: false
 
 management:
   endpoints:
