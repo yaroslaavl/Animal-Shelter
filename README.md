@@ -4,13 +4,15 @@
 Animal Shelter is a platform where users can submit requests to become guardians for animals. Users fill out their personal information and apply for guardianship. The shelter’s administration reviews each request and can approve or decline it.
 
 ## Features
-- User authorization and authentication
-- Viewing animals available for guardianship
-- Submitting and managing applications
-- Admin panel for reviewing and managing applications and animals
-- Email notifications
+- User authorisation and authentication
+- View animals available for care
+- Submit and manage applications
+- Admin panel to view and manage applications and animals
+- Notifications to email and in-app notifications
 - Application status tracking for users
 - Admin monitoring system with Spring Boot Admin
+- Animal medical records management by veterinarian
+- Check medical records once a month
 
 ## Technologies Used
 - Java
@@ -23,7 +25,7 @@ Animal Shelter is a platform where users can submit requests to become guardians
 - Lombok
 - Maven
 - Docker
-- Swagger
+- MinIo
 
 ## Getting Started
 
