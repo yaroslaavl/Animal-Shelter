@@ -66,6 +66,13 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
+    public List<NotificationReadDto> allNotifications() {
+        return notificationRepository.findAll()
+                .stream()
+                .map(notificationMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
     public String securityContext() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication.getName();

@@ -14,6 +14,22 @@ services:
     networks:
       - animal-shelter-net
 
+  minio:
+    image: quay.io/minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    command: server /data --console-address ":9090"
+    restart: always
+    networks:
+      - animal-shelter-net
+
   redis:
     image: redis:latest
     container_name: redis-app
@@ -27,6 +43,8 @@ services:
     restart: always
     networks:
       - animal-shelter-net
+    depends_on:
+      - minio
 
   animal-shelter-app:
     build:
@@ -63,3 +81,5 @@ volumes:
     driver: local
 
   redis_app_data:
+
+  minio_data:

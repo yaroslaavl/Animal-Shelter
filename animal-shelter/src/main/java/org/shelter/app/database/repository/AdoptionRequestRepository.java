@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,5 +13,7 @@ import java.util.UUID;
 public interface AdoptionRequestRepository extends JpaRepository<AdoptionRequest, UUID> {
 
     @Query("SELECT ar FROM AdoptionRequest ar WHERE ar.user.id = :userId AND ar.adoptionStatus = 'IN_PROGRESS'")
-    Optional<AdoptionRequest> findByUserId(Long userId);
+    Optional<AdoptionRequest> findByUserIdWhenStatusInProgress(Long userId);
+
+    List<AdoptionRequest> findAllByUserId(Long userId);
 }

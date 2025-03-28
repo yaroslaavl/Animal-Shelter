@@ -12,6 +12,7 @@ import org.shelter.app.dto.PetCreateEditDto;
 import org.shelter.app.dto.PetReadDto;
 import org.shelter.app.exception.MedicalRecordNotFoundException;
 import org.shelter.app.exception.PetAlreadyRegisteredException;
+import org.shelter.app.exception.PetFailedStatusException;
 import org.shelter.app.exception.PetNotFoundException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -74,6 +75,23 @@ public class PetService {
             return true;
         }
         return false;
+    }
+
+    @Transactional
+    public PetReadDto changePetStatus(Long id, String status) {
+        Pet pet = petRepository.findById(id)
+                .orElseThrow(() -> new PetNotFoundException("Pet not found"));
+
+        if (pet.getStatus().equals(PetStatus.ADOPTED)) {
+            throw new PetFailedStatusException("Pet already adopted");
+        }
+
+        pet.setStatus(PetStatus.valueOf(status));
+        return petMapper.toDto(petRepository.save(pet));
+    }
+
+    public PetReadDto getPet(Long id) {
+        return petMapper.toDto(petRepository.findById(id).orElseThrow(() -> new PetNotFoundException("Pet not found")));
     }
 
     public List<PetReadDto> getPetsByFilters(String breed, List<PetStatus> statuses, List<Gender> genders, String speciesName) {

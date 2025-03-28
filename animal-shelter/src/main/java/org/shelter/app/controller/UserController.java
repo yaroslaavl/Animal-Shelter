@@ -1,18 +1,17 @@
 package org.shelter.app.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.shelter.app.database.entity.enums.Role;
 import org.shelter.app.database.repository.UserRepository;
 import org.shelter.app.dto.*;
+import org.shelter.app.service.MinioService;
 import org.shelter.app.service.UserService;
 import org.shelter.app.validation.CreateAction;
 import org.shelter.app.validation.EditAction;
+import org.shelter.app.validation.ImageAction;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -33,6 +32,7 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
+    private final MinioService minioService;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginDto loginDto) {
@@ -112,5 +112,26 @@ public class UserController {
         userService.vetAssigment(vetRoleAssignmentDto);
 
         return ResponseEntity.ok("User with id: " + vetRoleAssignmentDto.getUserId() + " got a vet role");
+    }
+
+    @PutMapping("/upload-image")
+    public ResponseEntity<String> uploadUserAvatar(@ModelAttribute @Validated(ImageAction.class) ImageUploadDto imageUploadDto) {
+        try {
+            minioService.uploadImage(imageUploadDto.getFile(), null);
+            return ResponseEntity.ok("Image uploaded successfully");
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Upload image failed");
+        }
+    }
+
+    @GetMapping("/image")
+    public ResponseEntity<String> getUserAvatar(@RequestParam("email") String email) {
+        return ResponseEntity.ok(minioService.getUserAvatar(email, Boolean.FALSE));
+    }
+
+    @GetMapping("find/{userId}")
+    public ResponseEntity<UserReadDto> findUserById(@PathVariable("userId") Long userId) {
+        return ResponseEntity.ok(userService.findById(userId));
     }
 }
