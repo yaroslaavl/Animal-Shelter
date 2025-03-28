@@ -2,18 +2,21 @@ package org.shelter.app.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ietf.jgss.GSSContext;
 import org.shelter.app.database.entity.enums.Gender;
 import org.shelter.app.database.entity.enums.PetStatus;
+import org.shelter.app.dto.ImageUploadDto;
 import org.shelter.app.dto.PetCreateEditDto;
 import org.shelter.app.dto.PetReadDto;
+import org.shelter.app.service.MinioService;
 import org.shelter.app.service.PetService;
+import org.shelter.app.validation.ImageAction;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class PetController {
 
     private final PetService petService;
+    private final MinioService minioService;
 
     @PostMapping("/addNew")
     public ResponseEntity<PetReadDto> addNewPet(@RequestBody PetCreateEditDto petCreateEditDto) {
@@ -67,6 +71,34 @@ public class PetController {
                 List.of(PetStatus.AVAILABLE),
                 getGenders(gender),
                 speciesName));
+    }
+
+    @PutMapping("/change-status/{petId}")
+    public ResponseEntity<PetReadDto> changePetStatus(@PathVariable("petId") Long petId,
+                                                      @RequestParam("status") String status) {
+        return ResponseEntity.ok(petService.changePetStatus(petId, status));
+    }
+
+    @PutMapping("/upload-image/{petId}")
+    public ResponseEntity<String> uploadPetImage(@ModelAttribute @Validated(ImageAction.class) ImageUploadDto imageUploadDto,
+                                                 @PathVariable("petId") Long petId) {
+        try {
+            minioService.uploadImage(imageUploadDto.getFile(), petId);
+            return ResponseEntity.ok("Pet image uploaded");
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Upload image failed");
+        }
+    }
+
+    @GetMapping("/image")
+    public ResponseEntity<String> getUserAvatar(@RequestParam("petName") String petName) {
+        return ResponseEntity.ok(minioService.getUserAvatar(petName, Boolean.TRUE));
+    }
+
+    @GetMapping("/id/{petId}")
+    public ResponseEntity<PetReadDto> getPetById(@PathVariable("petId") Long petId) {
+        return ResponseEntity.ok(petService.getPet(petId));
     }
 
     private List<Gender> getGenders(String gender) {

@@ -2,7 +2,6 @@ package org.shelter.app.config;
 
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.shelter.app.dto.UserCreateDto;
 import org.shelter.app.filter.ApiKeyFilter;
 import org.shelter.app.service.UserService;
 import org.springframework.context.annotation.Bean;
@@ -16,20 +15,8 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
-import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.time.LocalDateTime;
-import java.util.Set;
-
-import static org.shelter.app.database.entity.enums.Role.VERIFIED_USER;
 
 @EnableAsync
 @Configuration
@@ -56,6 +43,10 @@ public class SecurityConfig {
                                 "/api/user/create",
                                 "/api/user/activate",
                                 "/api/pet/available",
+                                "/api/pet/image",
+                                "/api/user/image",
+                                "/api/user/find/*",
+                                "/api/pet/id/*",
                                 "/error").permitAll()
 
                         .requestMatchers(
@@ -64,9 +55,14 @@ public class SecurityConfig {
                                 "/api/user/resend-activation",
                                 "/api/user/update",
                                 "/api/notification/all-by-user",
+                                "/api/adoption-request/all",
+                                "/api/user/upload-image",
                                 "/api/user/reset-password").authenticated()
 
                         .requestMatchers(
+                                "/api/adoption-request/respond/*",
+                                "/api/notification/all",
+                                "/api/adoption-request/id/*",
                                 "/api/user/set-vetRole").hasRole("ADMIN")
 
                         .requestMatchers(
@@ -78,6 +74,8 @@ public class SecurityConfig {
                                 "/api/pet/add-to-adoption-list/*",
 
                                 "/api/medical-record/all/*",
+                                "/api/pet/change-status/*",
+                                "/api/pet/upload-image/*",
                                 "/api/pet/all-statuses").hasAnyRole("ADMIN", "VET")
 
                         .requestMatchers(

@@ -23,8 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -48,8 +50,12 @@ public class AdoptionRequestService {
             throw new UserRoleException("User has USER role");
         }
 
-        if (adoptionRequestRepository.findByUserId(user.getId()).isPresent()) {
-            throw new AdoptionRequestInProgressException("Adoption request already exists. Wait until adoption request finished");
+        if(user.getBirthDate() == null || user.getAddress() == null || user.getPhone() == null || user.getProfilePicture() == null) {
+            throw new UserFieldException("User has not filled in all the required fields");
+        }
+
+        if (adoptionRequestRepository.findByUserIdWhenStatusInProgress(user.getId()).isPresent()) {
+            throw new AdoptionRequestInProgressException("Adoption request already exists. Wait for a respond");
         }
 
         Pet pet = petRepository.findPetById(adoptionRequestCreateEditDto.getPetId())
@@ -77,8 +83,61 @@ public class AdoptionRequestService {
     }
 
     @Transactional
-    public boolean respondAdoptionRequest(Long adoptionRequestId, Boolean isAccepted) {
-        return true;
+    public void respondAdoptionRequest(UUID adoptionRequestId, Boolean isAccepted) {
+        AdoptionRequest adoptionRequest = adoptionRequestRepository.findById(adoptionRequestId)
+                .orElseThrow(() -> new AdoptionRequestNotFoundException("Adoption request not found"));
+
+        String adoptionToken = redisTemplate.opsForValue().get(adoptionRequest.getUser().getEmail() + ":adoption:" + adoptionRequest.getId());
+
+        if (adoptionToken == null || adoptionToken.isEmpty()) {
+            throw new TokenException("Token expired");
+        }
+
+        Pet pet = petRepository.findPetById(adoptionRequest.getPet().getId())
+                .orElseThrow(() -> new PetNotFoundException("Pet not found"));
+
+        if (!pet.getStatus().equals(PetStatus.AVAILABLE)) {
+            throw new PetFailedStatusException("Pet has invalid status " + pet.getStatus());
+        }
+
+        if (isAccepted) {
+            pet.setStatus(PetStatus.NOT_AVAILABLE);
+            adoptionRequest.setAdoptionStatus(AdoptionStatus.APPROVED);
+
+            notificationService.sendNotification(new NotificationCreateDto(
+                    adoptionRequest.getUser().getId(),
+                    adoptionRequest.getId(),
+                    "Your request has been approved! We look forward to seeing you at our shelter. Name of the animal: " + pet.getName()));
+
+            petRepository.save(pet);
+            adoptionRequestRepository.save(adoptionRequest);
+        } else {
+            adoptionRequest.setAdoptionStatus(AdoptionStatus.REJECTED);
+
+            notificationService.sendNotification(new NotificationCreateDto(
+                    adoptionRequest.getUser().getId(),
+                    adoptionRequest.getId(),
+                    "Your request has been rejected. Name of the animal: " + pet.getName()));
+
+            adoptionRequestRepository.save(adoptionRequest);
+        }
+    }
+
+    public List<AdoptionRequestReadDto> findAllByUserId() {
+        User user = userRepository.findByEmail(securityContext())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        return adoptionRequestRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(adoptionRequestMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public AdoptionRequestReadDto findById(UUID adoptionRequestId) {
+        AdoptionRequest adoptionRequest = adoptionRequestRepository.findById(adoptionRequestId)
+                .orElseThrow(() -> new AdoptionRequestNotFoundException("Adoption request not found"));
+
+        return adoptionRequestMapper.toDto(adoptionRequest);
     }
 
     public String securityContext() {

@@ -23,4 +23,9 @@ public class NotificationController {
     public ResponseEntity<List<NotificationReadDto>> getAllByUser() {
         return ResponseEntity.ok(notificationService.notificationsForUser());
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<NotificationReadDto>> getAll() {
+        return ResponseEntity.ok(notificationService.allNotifications());
+    }
 }

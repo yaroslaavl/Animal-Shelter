@@ -22,12 +22,7 @@ import org.shelter.app.database.entity.User;
 import org.shelter.app.database.repository.UserRepository;
 import org.shelter.app.mapper.UserMapper;
 
-import java.io.*;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -54,7 +49,6 @@ public class UserService implements UserDetailsService {
                     user.setEmailVerificationToken(activationToken);
                     user.setEmailVerified(false);
                     user.setCreatedAt(LocalDateTime.now());
-                    usersOfApp(userDto);
                     return userRepository.saveAndFlush(user);
                 })
                 .map(userMapper::toDto)
@@ -148,23 +142,6 @@ public class UserService implements UserDetailsService {
         userRepository.delete(user);
     }
 
-    @SneakyThrows
-    public void usersOfApp(UserCreateDto userCreateEditDto) {
-        ZonedDateTime zonedDateTime = ZonedDateTime.now(ZoneId.of("Europe/Warsaw"));
-        String formattedTime = zonedDateTime.format(
-                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
-                        .withLocale(new Locale("pl", "PL")));
-
-        try (BufferedWriter bufferedWriter = new BufferedWriter(
-                new FileWriter("animal-shelter/src/main/resources/newUsersOfApp.txt", true))) {
-            String record = String.format("%s   |   %s%n", userCreateEditDto.getEmail(), formattedTime);
-
-            bufferedWriter.write(record);
-        } catch (IOException e) {
-            log.error("Exception: " + e);
-        }
-    }
-
     @Transactional
     public UserReadDto updateUserData(UserUpdateDto userUpdateDto) {
         User user = userRepository.findByEmail(securityContext())
@@ -209,8 +186,10 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByEmail(username);
+    public UserReadDto findById(Long userId) {
+        return userRepository.findById(userId)
+                .map(userMapper::toDto)
+                .orElse(null);
     }
 
     @Override
