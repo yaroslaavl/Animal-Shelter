@@ -67,19 +67,6 @@ Once generated, copy the 16-digit key or password provided by the email service 
 
 Ensure these settings are correctly configured in application.yml file to enable email functionality in application.
 
-### Configuring OAuth2 for Google Authentication
-To configure OAuth2 for Google authentication:
-
-Client ID: Set client-id to your Google OAuth2 client ID obtained from the Google Developer Console.
-
-Client Secret: Use your client-secret provided by Google when registering your application.
-
-Redirect URI: Specify the redirect-uri where Google should redirect users after authentication. Example: http://localhost:8080/login/oauth2/code/google.
-
-Scope: Define scope to determine the level of access granted to your application. Common scopes include openid, email, and profile.
-
-These settings are essential for enabling Google OAuth2 authentication in your application. Ensure they are correctly configured to facilitate seamless user authentication with Google services.
-
 ### Installation
 1. Clone the repository:
 
