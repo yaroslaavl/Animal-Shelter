@@ -104,4 +104,4 @@ docker-compose up
 ```
 
 ### Contact
-Email - ylopatkin@gmail.com
+Email - yaroslav.lopatkin.work@gmail.com
